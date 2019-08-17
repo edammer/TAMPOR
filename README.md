@@ -1,57 +1,56 @@
-# Tunable Approach for Median Polish of Ratio -- Biological Abundance Batch Effect Removal
-# (TAMPOR), by Eric Dammer     For public use with citation of origin, and original author
-# ===========================================================================================#
+#### by Eric Dammer
+For public use with citation of origin, and of original author.
+####
 ## Purpose
-##
-## - Robustly removes batch artifacts and batchwise variance from abundance data.
-## - Works well even if batch replicates for normalization have unusual variance
-##   compared to biological samples not used for normalization
-##   (e.g., due to differential peptide digestion, different tissue region,
-##   or different genetic background of control samples.)
-##
+####
+#### - Robustly removes batch artifacts and batchwise variance from abundance data.
+#### - Works well even if batch replicates for normalization have unusual variance compared to biological samples not used for normalization (e.g., due to differential peptide digestion, different tissue region, or different genetic background of control samples.)
+####
 ## General Use Cases
-##
-## 1 Batch replicates (e.g., global internal standard, GIS, in TMT proteomics) if present
-##   are baseline samples considered as ratio denominator for removal of batch artifacts.
-## 2 Consider biologically similar samples as baseline for the denominator.
-##                                                         [set a GIS column in traits input]
-## 3 Third, baseline samples present can be used, and all other samples can also be used.
-##   This assumes batches are generally trait-balanced and randomized, but GIS and non-GIS
-##   samples can be grossly different.                                    [useAllNonGIS=TRUE]
-## 4 Last, if batches consist of trait-randomized and generally trait-balanced
-##   biological samples, all samples can be considered for baseline/denominator. [noGIS=TRUE]
-##
-# ===========================================================================================#
-##  inputs: (normalized or RAW) abundance, and traits each with sample names
-##
-##  output: as list, with the following elements:
-##
-## FOR DOWNSTREAM ANALYSIS
-## cleanRelAbun  abundance within-batch across batch batch-corrected
-##     cleanDat  log2(cleanRelAbun/row's central tendency of abundance) 
-##               (rows with 50%+ missing batches/values removed from the above.)
-##       traits  case-sample traits, of used samples, sorted and annotated
-##
-## FOR COMPARISON/DIAGNOSTICS, VISUALIZATION
-## cleanDat.oneIter      log2 of naive ratio, applying algorithm without iteration
-## cleanRelAbun.oneIter  naive ratio, converted back to abundance
-## converged             TRUE/FALSE, was convergence reached in the median polishing?
-## iterations            Number of median polish iterations performed
-## convergencePlot       Convergence plot (Frobenius norm 2-iteration difference)
-## logConvergencePlot    log10(Frobenius norm difference) convergence plot
-## varPlot.input         mean-SD plot of input abundance of same dimensions as output
-## varplot.oneIter       mean-SD plot of cleanRelAbun.oneIter
-## varPlot.cleanRelAbun  mean-SD plot of corrected abundance
-## MDSplot.input         limma MDS plot of input abundance with same dimensions as output
-## MDSplot.oneIter       MDS plot of cleanRelAbun.oneIter
-## MDSplot.cleanRelAbun  MDS plot of corrected abundance
-##
-## *.noGIS versions of variance and MDS plots are also possible list elements.
-# ===========================================================================================#
-## Depends on these 5 packages and their dependencies:
-## limma, vsn, doParallel, ggplot2, ggpubr
-# ===========================================================================================#
-options(stringsAsFactors = FALSE)
+####
+#### 1. Batch replicates (e.g., global internal standard, GIS, in TMT proteomics) if present are baseline samples considered as ratio denominator for removal of batch artifacts.
+#### 2. Consider biologically similar samples as baseline for the denominator.    [set a GIS column in traits input]
+#### 3. Third, baseline samples present can be used, and all other samples can also be used. This assumes batches are generally trait-balanced and randomized, but GIS and non-GIS samples can be grossly different.    [useAllNonGIS=TRUE]
+#### 4. Last, if batches consist of trait-randomized and generally trait-balanced biological samples, all samples can be considered for baseline/denominator.    [noGIS=TRUE]
+####
+####
+####  *inputs*: 
+1. (normalized or RAW) abundance
+2. traits, each with sample names
+####
+####  *outputs*:  (as list, with the following elements)
+####
+### FOR DOWNSTREAM ANALYSIS
+| list element | Description|
+| ------------:|:-----------|
+| cleanRelAbun | abundance within-batch across batch batch-corrected|
+|     cleanDat | log2(cleanRelAbun/row's central tendency of abundance) |
+|              | (rows with 50%+ missing batches/values removed from the above.)|
+|       traits | case-sample traits, of used samples, sorted and annotated |
+####
+### FOR COMPARISON/DIAGNOSTICS, VISUALIZATION
+|        list element      | Description|
+|     --------------------:|:-----------|
+|     cleanDat.oneIter     | log2 of naive ratio, applying algorithm without iteration|
+|     cleanRelAbun.oneIter | naive ratio, converted back to abundance|
+|     converged            | TRUE/FALSE, was convergence reached in the median polishing?|
+|     iterations           | Number of median polish iterations performed|
+|     convergencePlot      | Convergence plot (Frobenius norm 2-iteration difference)|
+|     logConvergencePlot   | log10(Frobenius norm difference) convergence plot|
+|     varPlot.input        | mean-SD plot of input abundance of same dimensions as output|
+|     varplot.oneIter      | mean-SD plot of cleanRelAbun.oneIter|
+|     varPlot.cleanRelAbun | mean-SD plot of corrected abundance|
+|     MDSplot.input        | limma MDS plot of input abundance with same dimensions as output|
+|     MDSplot.oneIter      | MDS plot of cleanRelAbun.oneIter|
+|     MDSplot.cleanRelAbun | MDS plot of corrected abundance|
+|                          |                                |
+     *.noGIS versions of variance and MDS plots are also possible list elements.
+####
+#### Depends on these 5 packages and their dependencies:
+ limma, vsn, doParallel, ggplot2, ggpubr
+####
+```R
+`options(stringsAsFactors = FALSE)
 
 # TAMPOR parameters (full list of 11 possible)
 #####################################################################################
@@ -89,3 +88,4 @@ TAMPORlist.GIShybrid <- TAMPOR(dat.real, traits.real, noGIS=FALSE, useAllNonGIS=
 # Use case 4
 TAMPORlist.noGIS <- TAMPOR(dat, traits, noGIS=TRUE, batchPrefixInSampleNames=TRUE, parallelThreads=parallelThreads,
                     outputSuffix="noGIS")
+`
