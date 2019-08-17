@@ -1,5 +1,6 @@
-#### by Eric Dammer
-For public use with citation of origin, and of original author.
+# Tunable Approach for Median Polish of Ratio -- Biological Abundance Batch Effect Removal
+## (TAMPOR), by Eric Dammer
+For public use with citation of origin, and original author
 ####
 ## Purpose
 ####
