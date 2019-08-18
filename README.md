@@ -52,7 +52,7 @@ For public use with citation of origin, and original author
 
 **The 3 last list elements above render the graphics of the PDF output pages.**
 
-     *If removeGISafter option not enabled, variance and MDS plots each display with and without GIS.*
+     If removeGISafter option not enabled, variance and MDS plots each display with and without GIS.
 
 ##### Writes PDF visualizing variance and MDS for (a) original, (b) first iteration, and (c) final output abundances to file:
      /path/TAMPOR-Improvement.Vis(#iterations)-#ROWSx#COLUMNS_outputSuffix.pdf
@@ -62,7 +62,7 @@ For public use with citation of origin, and original author
  limma, vsn, doParallel, ggplot2, ggpubr
 ####
 ```R
-`options(stringsAsFactors = FALSE)
+options(stringsAsFactors = FALSE)
 
 # TAMPOR parameters (full list)
 #####################################################################################
@@ -106,7 +106,13 @@ TAMPORlist.noGIS <- TAMPOR(dat, traits, noGIS=TRUE, batchPrefixInSampleNames=TRU
                     outputSuffix="noGIS")
 ```
 ####
-####  **_Sample Output:_** 
+####  **_Sample Output:_**
+### Multidimensional Scaling
 ![alt text](https://github.com/edammer/TAMPOR/blob/master/MDS50batchTMT.jpg "MDS improvement of 50 batch TMT proteomics data")
+####
+### Mean-SD Variance Plots
 ![alt text](https://github.com/edammer/TAMPOR/blob/master/meanSD50batchTMT.jpg "Variance removal visualized for same 50 batch TMT proteomics data")
+####
+### Convergence Tracking
 ![alt text](https://github.com/edammer/TAMPOR/blob/master/convergence50batchTMT.jpg "Convergence tracked for same 50 batch TMT brain proteome.")
+####
