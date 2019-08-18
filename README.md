@@ -57,7 +57,7 @@ For public use with citation of origin, and original author
 ```R
 `options(stringsAsFactors = FALSE)
 
-# TAMPOR parameters (full list of 11 possible)
+# TAMPOR parameters (full list)
 #####################################################################################
 outputSuffix = "TAMPOR"      #Filename Suffix for some outputs, and name of automatically created subfolder for output
 noGIS=FALSE        #If TRUE, the next setting and GISchannels settings are ignored, and all samples in each batch are taken as GIS
