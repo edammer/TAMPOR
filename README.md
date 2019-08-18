@@ -46,6 +46,10 @@ For public use with citation of origin, and original author
 |     MDSplot.cleanRelAbun | MDS plot of corrected abundance|
 |                          |                                |
      *.noGIS versions of variance and MDS plots are also possible list elements.
+
+##### Writes PDF of variance and MDS for original, first iteration, and last iteration output abundances to file:
+     /path/TAMPOR-Improvement.Vis(#iterations)-#ROWSx#COLUMNS_outputSuffix.pdf
+     
 ####
 #### Depends on these 5 packages and their dependencies:
  limma, vsn, doParallel, ggplot2, ggpubr
@@ -78,14 +82,18 @@ removeGISafter=FALSE   #Should samples designated as GIS be removed before visua
 minimumBatchSize=5     #batches with fewer samples will not be used or kept in data for batch variance removal [default=5]
 parallelThreads=8      #doParallel library will run this many threads locally to split steps 1a and 1b batchwise calculations,
                        #speeding processing time [default=2]
+
+path=getwd()       # Defaults to working directory path. This folder will contain output PDF of visualizations.
 #####################################################################################
 
+source("TAMPOR.R")
+
 # Use cases 1 & 2
-TAMPORlist.GIS <- TAMPOR(dat, traits, noGIS=FALSE, useAllNonGIS=FALSE, GISchannels=c("126","131"), parallelThreads=parallelThreads,
-                  outputSuffix="GISonly")
+TAMPORlist.GIS <- TAMPOR(dat, traits, noGIS=FALSE, useAllNonGIS=FALSE, GISchannels=c("126","131"),
+                  parallelThreads=parallelThreads, outputSuffix="GISonly")
 # Use case 3
-TAMPORlist.GIShybrid <- TAMPOR(dat.real, traits.real, noGIS=FALSE, useAllNonGIS=TRUE,GISchannels=c("126","131"),
-                    batchPrefixInSampleNames=TRUE, parallelThreads=parallelThreads, outputSuffix="GIShybrid",path=outputfigs)
+TAMPORlist.GIShybrid <- TAMPOR(dat, traits, noGIS=FALSE, useAllNonGIS=TRUE,GISchannels=c("126","131"),
+                    batchPrefixInSampleNames=TRUE, parallelThreads=parallelThreads, outputSuffix="GIShybrid")
 # Use case 4
 TAMPORlist.noGIS <- TAMPOR(dat, traits, noGIS=TRUE, batchPrefixInSampleNames=TRUE, parallelThreads=parallelThreads,
                     outputSuffix="noGIS")
