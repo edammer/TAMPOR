@@ -104,4 +104,9 @@ TAMPORlist.GIShybrid <- TAMPOR(dat, traits, noGIS=FALSE, useAllNonGIS=TRUE,GISch
 # Use case 4
 TAMPORlist.noGIS <- TAMPOR(dat, traits, noGIS=TRUE, batchPrefixInSampleNames=TRUE, parallelThreads=parallelThreads,
                     outputSuffix="noGIS")
-`
+```
+####
+####  **_Sample Output:_** 
+![alt text](https://github.com/edammer/TAMPOR/blob/master/MDS50batchTMT.jpg "MDS improvement of 50 batch TMT proteomics data")
+![alt text](https://github.com/edammer/TAMPOR/blob/master/meanSD50batchTMT.jpg "Variance removal visualized for same 50 batch TMT proteomics data")
+![alt text](https://github.com/edammer/TAMPOR/blob/master/convergence50batchTMT.jpg "Convergence tracked for same 50 batch TMT brain proteome.")
