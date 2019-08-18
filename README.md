@@ -51,7 +51,8 @@ For public use with citation of origin, and original author
 |                          |   c. corrected abundance (cleanRelAbun)                        |
 
 **The 3 last list elements above render the graphics of the PDF output pages.**
- *If removeGISafter option not enabled, variance and MDS plots each display w/ and w/o GIS.*
+
+     *If removeGISafter option not enabled, variance and MDS plots each display with and without GIS.*
 
 ##### Writes PDF visualizing variance and MDS for (a) original, (b) first iteration, and (c) final output abundances to file:
      /path/TAMPOR-Improvement.Vis(#iterations)-#ROWSx#COLUMNS_outputSuffix.pdf
