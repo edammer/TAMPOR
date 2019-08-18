@@ -15,11 +15,15 @@ For public use with citation of origin, and original author
 #### 4. Last, if batches consist of trait-randomized and generally trait-balanced biological samples, all samples can be considered for baseline/denominator.    [noGIS=TRUE]
 ####
 ####
-####  *inputs*: 
-1. (normalized or RAW) abundance
-2. traits, each with sample names
+####  **_inputs_**: 
+| data frame or matrix              | Description                                       |
+|:----------------------------------|:--------------------------------------------------|
+| 1. (normalized or RAW) abundance  | columns named by samples, rows by measured species|
+| 2. traits / phenotypes            | columns named by traits, rows named by sample     |
+
+ *Sample names as column and row names in abundance and traits, respectively, must match exactly.*
 ####
-####  *outputs*:  (as list, with the following elements)
+####  **_outputs_**:  (as list, with the following elements)
 ####
 ### FOR DOWNSTREAM ANALYSIS
 | list element | Description|
@@ -32,22 +36,24 @@ For public use with citation of origin, and original author
 ### FOR COMPARISON/DIAGNOSTICS, VISUALIZATION
 |        list element      | Description|
 |     --------------------:|:-----------|
-|     cleanDat.oneIter     | log2 of naive ratio, applying algorithm without iteration|
-|     cleanRelAbun.oneIter | naive ratio, converted back to abundance|
-|     converged            | TRUE/FALSE, was convergence reached in the median polishing?|
-|     iterations           | Number of median polish iterations performed|
-|     convergencePlot      | Convergence plot (Frobenius norm 2-iteration difference)|
-|     logConvergencePlot   | log10(Frobenius norm difference) convergence plot|
-|     varPlot.input        | mean-SD plot of input abundance of same dimensions as output|
-|     varplot.oneIter      | mean-SD plot of cleanRelAbun.oneIter|
-|     varPlot.cleanRelAbun | mean-SD plot of corrected abundance|
-|     MDSplot.input        | limma MDS plot of input abundance with same dimensions as output|
-|     MDSplot.oneIter      | MDS plot of cleanRelAbun.oneIter|
-|     MDSplot.cleanRelAbun | MDS plot of corrected abundance|
-|                          |                                |
-     *.noGIS versions of variance and MDS plots are also possible list elements.
+|     cleanDat.oneIter     | log2 of naive ratio, applying algorithm without iteration      |
+|     cleanRelAbun.oneIter | naive ratio, converted back to abundance                       |
+|     converged            | TRUE/FALSE, was convergence reached in the median polishing?   |
+|     iterations           | Number of median polish iterations performed                   |
+|     **convergencePlots** | **Convergence plots of Frobenius norm 2-iteration differences**|
+|     **meanSDplots**      | **vsn package mean-SD plots of variance for:**                 |
+|                          |   a. input abundance of same dimensions as output              |
+|                          |   b. cleanRelAbun.oneIter                                      |
+|                          |   c. corrected abundance (cleanRelAbun)                        |
+|     **MDSplots**         | **limma multi-dimensional scaling plots for:**                 |
+|                          |   a. input abundance with same dimensions as output            |
+|                          |   b. cleanRelAbun.oneIter                                      |
+|                          |   c. corrected abundance (cleanRelAbun)                        |
 
-##### Writes PDF of variance and MDS for original, first iteration, and last iteration output abundances to file:
+**The 3 last list elements above render the graphics of the PDF output pages.**
+ *If removeGISafter option not enabled, variance and MDS plots each display w/ and w/o GIS.*
+
+##### Writes PDF visualizing variance and MDS for (a) original, (b) first iteration, and (c) final output abundances to file:
      /path/TAMPOR-Improvement.Vis(#iterations)-#ROWSx#COLUMNS_outputSuffix.pdf
      
 ####
