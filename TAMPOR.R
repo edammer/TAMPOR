@@ -427,7 +427,6 @@ numericMeta<-traitsWithGIS<-traits
 #ratioCleanDatUnnorm<-readRDS(paste0(outputtabs,"ratioCleanDatUnnorm.naiveRatioOverGIS_",iterations,"iter.RDS"))
 #relAbundanceUnnorm<-readRDS(paste0(outputtabs,"relAbundanceUnnorm.naiveRelAbun.AfterRatioOverGIS_",iterations,"iter.RDS"))
 
-#if (!exists("net")) {
   ## One can remove GIS here, depending on whether these are (not) biologically meaningful for comparisons downstream
   if(removeGISafter) numericMeta <- traits <- traits[!traits$GIS == "GIS", ] #***
   cleanDat <- cleanDatNorm2[, match(rownames(traits), colnames(cleanDatNorm2))] #NOTE: overwrites cleanDat (intermediate structure during cleanup) for use in ANOVA and volcanoes
@@ -451,8 +450,6 @@ numericMeta<-traitsWithGIS<-traits
   dim(cleanDat.origNoGIS)
   cleanDat.origNoGIS<-cleanDat.origNoGIS[match(rownames(cleanDat),rownames(cleanDat.origNoGIS)),]
   dim(cleanDat.origNoGIS)
-#}
-
 
 
 ###################################################################################################################################
@@ -460,7 +457,7 @@ numericMeta<-traitsWithGIS<-traits
 
 ## Check the data integrity and generalize improvements
 
-file1 <- paste0(outputfigs,"/Data_Integrity&Improvement_Checks(", iterations, "iterations)-TAMPOR-", nrow(cleanDat), "x", ncol(cleanDat), "_", outputSuffix, ".pdf")
+file1 <- paste0(outputfigs,"/TAMPOR-Improvement.Vis(", iterations, "iterations)-", nrow(cleanDat), "x", ncol(cleanDat), "_", outputSuffix, ".pdf")
 cat(paste0("Writing PDF output to ",file1,"\n"))
 
 # Has variance been stabilized?
@@ -506,44 +503,6 @@ if(!length(which(traits$GIS=="GIS"))==nrow(traits) & !removeGISafter) print(mean
 #print(meanSDplots) #prints plots 1-4
 
 
-
-#<SKIPPED>
-## Check histogram and qq-plot. 
-## Relative abundance data. 
-#par(mfrow=c(2,2))
-#hist(log2(relAbundanceNorm2),breaks=100,col="gray")
-#hist(log2(relAbundanceUnnorm),breaks=100,col="gray")
-#qqnorm(log2(relAbundanceNorm2))
-#qqline(log2(relAbundanceNorm2), datax = FALSE, col = "steelblue", lwd = 2)
-#qqnorm(log2(relAbundanceUnnorm))
-#qqline(log2(relAbundanceUnnorm), datax = FALSE, col = "steelblue", lwd = 2)
-## Ratio Data. 
-#hist(cleanDat,breaks=100,col="gray") # Thin tailed.
-#hist(log2(ratioCleanDatUnnorm),breaks=100,col="gray") # Thin tailed.
-#qqnorm(cleanDat)
-#qqline(cleanDat, datax = FALSE, col = "steelblue", lwd = 2)
-#qqnorm(log2(ratioCleanDatUnnorm))
-#qqline(log2(ratioCleanDatUnnorm), datax = FALSE, col = "steelblue", lwd = 2)
-#
-## Density plots
-#ggplotDensity(relAbundanceNorm2,colID=".",title="Norm Relative Abundance")
-#ggplotDensity(relAbundanceUnnorm,colID=".",title="Unnorm Relative Abundance")
-#ggplotDensity(2^cleanDat,colID=".",title="Norm Ratios")
-#ggplotDensity(ratioCleanDatUnnorm,colID=".",title="Unnorm Ratios")
-#
-## Box plots.
-#par(mfrow=c(2,2))
-#boxplot(log2(relAbundanceNorm2),main="Norm LFQ Abundance",las=2, col=traits$Color,pch=16,outcex=0.15,whisklty="solid",staplelty=0)
-##boxplot(log2(relAbundanceUnnorm),main="Unnorm Relative Abundance",las=2, col=traits$Color,pch=16,outcex=0.15,whisklty="solid",staplelty=0)
-#boxplot(log2(cleanDat.original),main="Unnorm (Original) LFQ Abundance",las=2, col=traits$Color,pch=16,outcex=0.15,whisklty="solid",staplelty=0)
-#boxplot(cleanDat,main="log2(Robustly Norm LFQ), log2(Ratios)",las=2, col=traits$Color[match(colnames(cleanDat),rownames(traits))],pch=16,outcex=0.15,whisklty="solid",staplelty=0)
-#boxplot(log2(ratioCleanDatUnnorm),main="log2(Naive Norm LFQ), log2(Ratios)",las=2, col=traits$Color,pch=16,outcex=0.15,whisklty="solid",staplelty=0)
-
-
-
-
-## Bradshaw Plot. Examine MDS post normalization. 
-
 # Examine MDS plot post normalization.
 cat("Generating MDS plots in PDF output...\n")
   MDS1.plot <- limma::plotMDS(log2(cleanDat.origNoGIS),col=traits$BatchColor,main="ORIGINAL log2(abundance)")
@@ -555,15 +514,8 @@ cat("Generating MDS plots in PDF output...\n")
     MDS3.noGIS.plot <- limma::plotMDS(log2(relAbundanceNorm2)[,-which(traits$GIS=="GIS")],col=traits$BatchColor[-which(traits$GIS=="GIS")],main=paste0("TAMPOR log2(abundance) [",iterations,"iterations]"))
   }
 
-#  limma::plotMDS(relAbundanceNorm2,col=traits$Color,main=paste0("FINAL normalized LFQ abundance [",iterations,"iterations]"))
-#  limma::plotMDS(cleanDat.origNoGIS,col=traits$Color,main="ORIGINAL LFQ abundance")
-
-#  limma::plotMDS(cleanDat,col=traits$Color[match(colnames(cleanDat),rownames(traits))],main=paste0("FINAL normalized clean log2(ratio) [",iterations,"iterations]"))
-#  limma::plotMDS(log2(ratioCleanDatUnnorm),col=traits$Color,main="ORIGINAL log2(ratio) [1-step]")
-
 par(mfrow=c(2.3,3))
 
-#starkest comparisons
 print(MDS1.plot)
 print(MDS2.plot)
 print(MDS3.plot)
@@ -577,8 +529,11 @@ if(!length(which(traits$GIS=="GIS"))==nrow(traits) & !removeGISafter) {
 }
 dev.off() #closes file1
 
-#Notes -- X proteins remain, Y iterations (characteristic of convergence). 
-#mean-SD plots look improved going from no norm, to naive ratio*rel abun, to TAMPOR rel abundance...
+
+# Output list of all data and visualizations
+
+#Auto notes output may be a good idea-- X (rows/proteins/transcripts/metabolites) remain, Y iterations (characteristic of convergence). 
+#mean-SD plots have improved mean and minimum SD, going from no norm, to naive ratio*rel abun, to TAMPOR rel abundance...
 
 if(!length(which(traits$GIS=="GIS"))==nrow(traits) & !removeGISafter) {
   return(list(cleanDat=cleanDatNorm2,cleanRelAbun=relAbundanceNorm2,traits=traits,cleanDat.oneIter=ratioCleanDatUnnorm,cleanRelAbun.oneIter=relAbundanceUnnorm,
