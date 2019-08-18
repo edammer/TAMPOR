@@ -380,16 +380,21 @@ for (repeats in 1:iterations) {
 } # closes "for (repeats in 1:iterations)"
 iterations.intended=iterations
 iterations=repeats
-converged=as.logical(iterations==iterations.intended)
+converged=as.logical(abs(iterationTrackingDF[repeats,4])<0.00000001)
 
 ## Output plots showing convergence approach over the iterations run.
-#par(mfrow=c(1,2))
 if (iterations>1) {
-  convergencePlot <- plot(iterationTrackingDF[2:nrow(iterationTrackingDF),1],abs(iterationTrackingDF[2:nrow(iterationTrackingDF),4]),xlab="Iteration",ylab="Frobenius Norm Diff from Previous", main="Linear Scale")
-  logConvergencePlot <- plot(iterationTrackingDF[2:nrow(iterationTrackingDF),1],log10(abs(iterationTrackingDF[2:nrow(iterationTrackingDF),4])),xlab="Iteration",ylab="log10(|Frobenius Norm Diff from Previous|)", main="Log10 Scale")
+  par(mfrow=c(1,2),oma=c(0,0,2,0))
+  plot(iterationTrackingDF[2:nrow(iterationTrackingDF),1],abs(iterationTrackingDF[2:nrow(iterationTrackingDF),4]),xlab="Iteration",ylab="Frobenius Norm Diff from Previous", main="Linear Scale")
+  plot(iterationTrackingDF[2:nrow(iterationTrackingDF),1],log10(abs(iterationTrackingDF[2:nrow(iterationTrackingDF),4])),xlab="Iteration",ylab="log10(|Frobenius Norm Diff from Previous|)", main="Log10 Scale")
+  mtext(paste0("Convergence Tracking, Iterations 2-",iterations),line=0.25,outer=TRUE,cex=1.5)
+  convergencePlots<-recordPlot()
+  PDFpage3=TRUE
 } else {
-  convergencePlot=FALSE
-  logConvergencePlot=FALSE
+#  convergencePlot=FALSE
+#  logConvergencePlot=FALSE
+  convergencePlots=FALSE
+  PDFpage3=FALSE
 }
 
 rm(step1a)
@@ -420,7 +425,7 @@ traits$BatchColor<-labels2colors(traits$Batch)
 numericMeta<-traitsWithGIS<-traits
 
 ###################################################################################################################################
-## Sample Removal and finalization of cleanDat as log2(normalized ratio) centered per sample at 0 (equal loading assumption).
+## Sample Removal and finalization of cleanDat as log2(ratio).
 
 #cleanDat<-cleanDatNorm2<-readRDS(paste0(outputtabs,"cleanDat.TAMPOR_",iterations,"iter.RDS"))
 #relAbundanceNorm2<-readRDS(paste0(outputtabs,"relAbundanceNorm2.alternateTAMPOR.output_",iterations,"iter.RDS"))
@@ -429,7 +434,7 @@ numericMeta<-traitsWithGIS<-traits
 
   ## One can remove GIS here, depending on whether these are (not) biologically meaningful for comparisons downstream
   if(removeGISafter) numericMeta <- traits <- traits[!traits$GIS == "GIS", ] #***
-  cleanDat <- cleanDatNorm2[, match(rownames(traits), colnames(cleanDatNorm2))] #NOTE: overwrites cleanDat (intermediate structure during cleanup) for use in ANOVA and volcanoes
+  cleanDat <- cleanDatNorm2[, match(rownames(traits), colnames(cleanDatNorm2))] #NOTE: overwrites cleanDat (intermediate structure during cleanup)
 
   ratioCleanDatUnnorm <- ratioCleanDatUnnorm[, match(rownames(traits), colnames(ratioCleanDatUnnorm))]
   relAbundanceNorm2 <- relAbundanceNorm2[, match(rownames(traits), colnames(relAbundanceNorm2))]
@@ -444,12 +449,12 @@ numericMeta<-traitsWithGIS<-traits
     ratioCleanDatUnnorm <- ratioCleanDatUnnorm[, -match(removeColumns.cleanDat,colnames(ratioCleanDatUnnorm))]
     relAbundanceNorm2 <- relAbundanceNorm2[, -match(removeColumns.cleanDat,colnames(relAbundanceNorm2))]
   }
-  cleanDat.origNoGIS<-as.data.frame(cleanDat.original)[, match(rownames(traits), colnames(cleanDat.original))]
+  cleanDat.orig<-as.data.frame(cleanDat.original)[, match(rownames(traits), colnames(cleanDat.original))]
 
-  # Only keep rows in original cleanDat (cleanDat.origNoGIS) matching final normed data
-  dim(cleanDat.origNoGIS)
-  cleanDat.origNoGIS<-cleanDat.origNoGIS[match(rownames(cleanDat),rownames(cleanDat.origNoGIS)),]
-  dim(cleanDat.origNoGIS)
+  # Only keep rows in original cleanDat (cleanDat.orig) matching final normed data
+#  dim(cleanDat.orig)
+  cleanDat.orig<-cleanDat.orig[match(rownames(cleanDat),rownames(cleanDat.orig)),]
+#  dim(cleanDat.orig)
 
 
 ###################################################################################################################################
@@ -466,67 +471,76 @@ plot1 <- vsn::meanSdPlot(force.inf2NA(log2(relAbundanceNorm2)),xlab="rank(mean):
 #plot2 <- vsn::meanSdPlot(force.inf2NA(cleanDat),xlab="rank(mean):  Final TAMPOR log2(ratio)") # Ratio data has u-shape.
 #plot3 <- vsn::meanSdPlot(force.inf2NA(log2(relAbundanceUnnorm)),xlab="rank(mean):  log2(relabundanceUnnorm)") # Abundance. 
 plot4 <- vsn::meanSdPlot(force.inf2NA(log2(ratioCleanDatUnnorm*RW.relAbunFactors.HiMissRmvd)),xlab="rank(mean):  Naive log2(abundance/GIS *rel. Abun.)") # ratio converted to rel abun does not have u-shape.
-#plot4 <- vsn::meanSdPlot(force.inf2NA(cleanDatNorm2.HKG),xlab="rank(mean)  for cleanDatNorm2.HKG")
-plot5 <- vsn::meanSdPlot(force.inf2NA(log2(as.matrix(cleanDat.origNoGIS))),xlab="rank(mean): log2(orig. abun)") #RAW
+plot5 <- vsn::meanSdPlot(force.inf2NA(log2(as.matrix(cleanDat.orig))),xlab="rank(mean): log2(orig. abun)") #RAW
 
 ymax=1.25*max(c(plot1$sd,plot4$sd,plot5$sd))  #(scale all the meanSD plots so they are comparable)
 horizMin=min(c(plot1$sd,plot4$sd,plot5$sd))   #set to y=minimum of lowest-reaching trendline form mean-sd plots being printed
 
-meanSDplots2<-ggpubr::ggarrange(plotlist=list(plot5$gg + scale_y_continuous(limits=c(0,ymax)) + geom_hline(yintercept=horizMin, linetype="dashed", color = "yellow", size=1.2) + ggtitle(paste0("Variance (mean-SD) Plots for Abundance\nMatrices of Dimensions ",nrow(relAbundanceNorm2)," x ",ncol(relAbundanceNorm2))), plot4$gg + scale_y_continuous(limits=c(0,ymax)) + geom_hline(yintercept=horizMin, linetype="dashed", color = "yellow", size=1.2) + ggtitle(" \n "), plot1$gg + scale_y_continuous(limits=c(0,ymax)) + geom_hline(yintercept=horizMin, linetype="dashed", color = "yellow", size=1.2) + ggtitle(" \n ") ),nrow=2,ncol=3,common.legend=TRUE) #frame fill order is columwise, but is rowwise for marrangeGrob. 
+#meanSDplots2<-ggpubr::ggarrange(plotlist=list(plot5$gg + scale_y_continuous(limits=c(0,ymax)) + geom_hline(yintercept=horizMin, linetype="dashed", color = "yellow", size=1.2) + ggtitle(paste0("Variance (mean-SD) Plots for Abundance\nMatrices of Dimensions ",nrow(relAbundanceNorm2)," x ",ncol(relAbundanceNorm2))), plot4$gg + scale_y_continuous(limits=c(0,ymax)) + geom_hline(yintercept=horizMin, linetype="dashed", color = "yellow", size=1.2) + ggtitle(" \n "), plot1$gg + scale_y_continuous(limits=c(0,ymax)) + geom_hline(yintercept=horizMin, linetype="dashed", color = "yellow", size=1.2) + ggtitle(" \n ") ),nrow=2,ncol=3,common.legend=TRUE) #frame fill order is columwise, but is rowwise for marrangeGrob. 
 
 
 # Compare same plots without GIS, if we did not remove GIS after TAMPOR.
 if(!length(which(traits$GIS=="GIS"))==nrow(traits) & !removeGISafter) {
   plot1.noGIS <- vsn::meanSdPlot(log2(relAbundanceNorm2)[,-which(traits$GIS=="GIS")],xlab="rank(mean):  log2(relAbundanceNorm2)")
   plot4.noGIS <- vsn::meanSdPlot(log2(ratioCleanDatUnnorm*RW.relAbunFactors.HiMissRmvd)[,-which(traits$GIS=="GIS")],xlab="rank(mean):  Naive log2(abundance/GIS *rel. Abun.)") # ratio converted to rel abun does not have u-shape.
-  plot5.noGIS <- vsn::meanSdPlot(log2(as.matrix(cleanDat.origNoGIS))[,-which(traits$GIS=="GIS")],xlab="rank(mean): log2(orig. abun)") #RAW
+  plot5.noGIS <- vsn::meanSdPlot(log2(as.matrix(cleanDat.orig))[,-which(traits$GIS=="GIS")],xlab="rank(mean): log2(orig. abun)") #RAW
 
   ymax.noGIS=1.25*max(c(plot1.noGIS$sd,plot4.noGIS$sd,plot5.noGIS$sd))
   horizMin.noGIS=min(c(plot1.noGIS$sd,plot4.noGIS$sd,plot5.noGIS$sd))
 
-  meanSDplots2.noGIS<-ggpubr::ggarrange(plotlist=list(plot5.noGIS$gg + scale_y_continuous(limits=c(0,ymax.noGIS)) + geom_hline(yintercept=horizMin.noGIS, linetype="dashed", color = "yellow", size=1.2) + ggtitle(paste0("Variance (mean-SD) Plots for Abundance\nMatrices* of Dimensions ",nrow(relAbundanceNorm2)," x ",ncol(relAbundanceNorm2[,-which(traits$GIS=="GIS")]))), plot4.noGIS$gg + scale_y_continuous(limits=c(0,ymax.noGIS)) + geom_hline(yintercept=horizMin.noGIS, linetype="dashed", color = "yellow", size=1.2) + ggtitle("*No GIS control samples included\n "), plot1.noGIS$gg + scale_y_continuous(limits=c(0,ymax.noGIS)) + geom_hline(yintercept=horizMin.noGIS, linetype="dashed", color = "yellow", size=1.2) + ggtitle(" \n ") ),nrow=2,ncol=3,common.legend=TRUE) #frame fill order is columwise, but is rowwise for marrangeGrob. 
+#  meanSDplots2.noGIS<-ggpubr::ggarrange(plotlist=list(plot5.noGIS$gg + scale_y_continuous(limits=c(0,ymax.noGIS)) + geom_hline(yintercept=horizMin.noGIS, linetype="dashed", color = "yellow", size=1.2) + ggtitle(paste0("Variance (mean-SD) Plots for Abundance\nMatrices* of Dimensions ",nrow(relAbundanceNorm2)," x ",ncol(relAbundanceNorm2[,-which(traits$GIS=="GIS")]))), plot4.noGIS$gg + scale_y_continuous(limits=c(0,ymax.noGIS)) + geom_hline(yintercept=horizMin.noGIS, linetype="dashed", color = "yellow", size=1.2) + ggtitle("*No GIS control samples included\n "), plot1.noGIS$gg + scale_y_continuous(limits=c(0,ymax.noGIS)) + geom_hline(yintercept=horizMin.noGIS, linetype="dashed", color = "yellow", size=1.2) + ggtitle(" \n ") ),nrow=2,ncol=3,common.legend=TRUE) #frame fill order is columwise, but is rowwise for marrangeGrob. 
 }
-
-
-pdf(file1, width = 12, height = 8)
-par(mfrow=c(2,3))
-
-# The starkest comparison -- from original norm abundance (no ratio), to Naive abun/GIS (converted back to rel abundance), 
-print(meanSDplots2)
-
-# Print same plots without GIS, if we did not remove GIS after TAMPOR.
-if(!length(which(traits$GIS=="GIS"))==nrow(traits) & !removeGISafter) print(meanSDplots2.noGIS)
-
 
 ##other variance plot views (not used)
 #meanSDplots<-ggpubr::ggarrange(plotlist=list(plot1$gg + scale_y_continuous(limits=c(0,ymax)) + geom_hline(yintercept=horizMin, linetype="dashed", color = "yellow", size=1.2),plot3$gg + scale_y_continuous(limits=c(0,ymax)) + geom_hline(yintercept=horizMin, linetype="dashed", color = "yellow", size=1.2),plot2$gg + scale_y_continuous(limits=c(0,ymax)) + geom_hline(yintercept=horizMin, linetype="dashed", color = "orange", size=1.2) ,plot4$gg + scale_y_continuous(limits=c(0,ymax)) + geom_hline(yintercept=horizMin, linetype="dashed", color = "orange", size=1.2) ),nrow=2,ncol=2) #frame fill order is columwise, but is rowwise for marrangeGrob. 
 #print(meanSDplots) #prints plots 1-4
 
+# all 3-6 meanSDplots on one page:
+meanSDplots<-ggpubr::ggarrange(plotlist=list(plot5$gg + scale_y_continuous(limits=c(0,ymax)) + geom_hline(yintercept=horizMin, linetype="dashed", color = "yellow", size=1.2) + ggtitle(paste0("Variance (mean-SD) Plots for Abundance\nMatrices of Dimensions ",nrow(relAbundanceNorm2)," x ",ncol(relAbundanceNorm2))), plot4$gg + scale_y_continuous(limits=c(0,ymax)) + geom_hline(yintercept=horizMin, linetype="dashed", color = "yellow", size=1.2) + ggtitle(" \n "), plot1$gg + scale_y_continuous(limits=c(0,ymax)) + geom_hline(yintercept=horizMin, linetype="dashed", color = "yellow", size=1.2) + ggtitle(" \n "),
+                                              plot5.noGIS$gg + scale_y_continuous(limits=c(0,ymax.noGIS)) + geom_hline(yintercept=horizMin.noGIS, linetype="dashed", color = "yellow", size=1.2) + ggtitle(paste0("Variance (mean-SD) Plots for Abundance\nMatrices* of Dimensions ",nrow(relAbundanceNorm2)," x ",ncol(relAbundanceNorm2[,-which(traits$GIS=="GIS")]))), plot4.noGIS$gg + scale_y_continuous(limits=c(0,ymax.noGIS)) + geom_hline(yintercept=horizMin.noGIS, linetype="dashed", color = "yellow", size=1.2) + ggtitle("*No GIS control samples included\n "), plot1.noGIS$gg + scale_y_continuous(limits=c(0,ymax.noGIS)) + geom_hline(yintercept=horizMin.noGIS, linetype="dashed", color = "yellow", size=1.2) + ggtitle(" \n ") ),nrow=2,ncol=3,common.legend=TRUE) #frame fill order is columwise, but is rowwise for marrangeGrob. 
 
-# Examine MDS plot post normalization.
+
+
+
+# Output page 1 for capture
+par(mfrow=c(2,3))
+print(meanSDplots)
+meanSDplots.rec<-recordPlot()
+
+
+# Generate MDS plot pre/post normalization.
 cat("Generating MDS plots in PDF output...\n")
-  MDS1.plot <- limma::plotMDS(log2(cleanDat.origNoGIS),col=traits$BatchColor,main="ORIGINAL log2(abundance)")
-  MDS2.plot <- limma::plotMDS(log2(ratioCleanDatUnnorm*RW.relAbunFactors.HiMissRmvd),col=traits$BatchColor,main="Naive log2(abundance/GIS *Rel Abun.)")
-  MDS3.plot <- limma::plotMDS(log2(relAbundanceNorm2),col=traits$BatchColor,main=paste0("TAMPOR log2(abundance) [",iterations,"iterations]"))
-  if(!length(which(traits$GIS=="GIS"))==nrow(traits) & !removeGISafter) {
-    MDS1.noGIS.plot <- limma::plotMDS(log2(cleanDat.origNoGIS)[,-which(traits$GIS=="GIS")],col=traits$BatchColor[-which(traits$GIS=="GIS")],main="ORIGINAL log2(abundance)")
-    MDS2.noGIS.plot <- limma::plotMDS(log2(ratioCleanDatUnnorm*RW.relAbunFactors.HiMissRmvd)[,-which(traits$GIS=="GIS")],col=traits$BatchColor[-which(traits$GIS=="GIS")],main="Naive log2(abundance/GIS *Rel Abun.)")
-    MDS3.noGIS.plot <- limma::plotMDS(log2(relAbundanceNorm2)[,-which(traits$GIS=="GIS")],col=traits$BatchColor[-which(traits$GIS=="GIS")],main=paste0("TAMPOR log2(abundance) [",iterations,"iterations]"))
-  }
-
 par(mfrow=c(2.3,3))
+# The starkest comparisons -- from original norm abundance (no ratio), to Naive abun/GIS (converted back to rel abundance), to polished output
+MDS1.plot <- limma::plotMDS(log2(cleanDat.orig),col=traits$BatchColor,main="ORIGINAL log2(abundance)")
+MDS2.plot <- limma::plotMDS(log2(ratioCleanDatUnnorm*RW.relAbunFactors.HiMissRmvd),col=traits$BatchColor,main="Naive log2(abundance/GIS *Rel Abun.)")
+MDS3.plot <- limma::plotMDS(log2(relAbundanceNorm2),col=traits$BatchColor,main=paste0("TAMPOR log2(abundance) [",iterations,"iterations]"))
 
-print(MDS1.plot)
-print(MDS2.plot)
-print(MDS3.plot)
+# Print same plots without GIS, if we did not remove GIS after TAMPOR.
 if(!length(which(traits$GIS=="GIS"))==nrow(traits) & !removeGISafter) {
-  print(MDS1.noGIS.plot)
+  MDS1.noGIS.plot <- limma::plotMDS(log2(cleanDat.orig)[,-which(traits$GIS=="GIS")],col=traits$BatchColor[-which(traits$GIS=="GIS")],main="ORIGINAL log2(abundance)")
   mtext("GIS Removed")
-  print(MDS2.noGIS.plot)
+  MDS2.noGIS.plot <- limma::plotMDS(log2(ratioCleanDatUnnorm*RW.relAbunFactors.HiMissRmvd)[,-which(traits$GIS=="GIS")],col=traits$BatchColor[-which(traits$GIS=="GIS")],main="Naive log2(abundance/GIS *Rel Abun.)")
   mtext("GIS Removed")
-  print(MDS3.noGIS.plot)
+  MDS3.noGIS.plot <- limma::plotMDS(log2(relAbundanceNorm2)[,-which(traits$GIS=="GIS")],col=traits$BatchColor[-which(traits$GIS=="GIS")],main=paste0("TAMPOR log2(abundance) [",iterations,"iterations]"))
   mtext("GIS Removed")
 }
+
+MDSplots.rec<-recordPlot()
+
+
+#Output PDF with same pages, and convergencePlots on page 3
+pdf(file1, width = 12, height = 8)
+
+#par(mfrow=c(2,3))
+meanSDplots.rec #page 1
+
+#par(mfrow=c(2.3,3))
+MDSplots.rec #page 2
+
+# Page 3 (convergence tracking)
+if (PDFpage3) print(convergencePlots)
+
 dev.off() #closes file1
 
 
@@ -535,14 +549,17 @@ dev.off() #closes file1
 #Auto notes output may be a good idea-- X (rows/proteins/transcripts/metabolites) remain, Y iterations (characteristic of convergence). 
 #mean-SD plots have improved mean and minimum SD, going from no norm, to naive ratio*rel abun, to TAMPOR rel abundance...
 
-if(!length(which(traits$GIS=="GIS"))==nrow(traits) & !removeGISafter) {
+if(!length(which(traits$GIS=="GIS"))==nrow(traits) & !removeGISafter) { #single return statement now ok if only outputting recorded PDF pages...
   return(list(cleanDat=cleanDatNorm2,cleanRelAbun=relAbundanceNorm2,traits=traits,cleanDat.oneIter=ratioCleanDatUnnorm,cleanRelAbun.oneIter=relAbundanceUnnorm,
-              convergencePlot=convergencePlot,logConvergencePlot=logConvergencePlot,varPlot.input=plot5,varPlot.oneIter=plot4,varPlot.cleanRelAbun=plot1,MDSplot.input=MDS1.plot,MDSplot.oneIter=MDS2.plot,MDSplot.cleanRelAbun=MDS3.plot,
-              varPlot.input.noGIS=plot5.noGIS,varPlot.oneIter.noGIS=plot4.noGIS,varPlot.cleanRelAbun.noGIS=plot1.noGIS,MDSplot.input.noGIS=MDS1.noGIS.plot,MDSplot.oneIter.noGIS=MDS2.noGIS.plot,MDSplot.cleanRelAbun.noGIS=MDS3.noGIS.plot,
+              convergencePlots=convergencePlots,meanSDplots=meanSDplots.rec,MDSplots=MDSplots.rec,
+#              convergencePlot=convergencePlot,logConvergencePlot=logConvergencePlot,varPlot.input=plot5,varPlot.oneIter=plot4,varPlot.cleanRelAbun=plot1,MDSplot.input=MDS1.plot,MDSplot.oneIter=MDS2.plot,MDSplot.cleanRelAbun=MDS3.plot,
+#              varPlot.input.noGIS=plot5.noGIS,varPlot.oneIter.noGIS=plot4.noGIS,varPlot.cleanRelAbun.noGIS=plot1.noGIS,MDSplot.input.noGIS=MDS1.noGIS.plot,MDSplot.oneIter.noGIS=MDS2.noGIS.plot,MDSplot.cleanRelAbun.noGIS=MDS3.noGIS.plot,
               iterations=iterations,converged=converged))
 } else {
   return(list(cleanDat=cleanDatNorm2,cleanRelAbun=relAbundanceNorm2,traits=traits,cleanDat.oneIter=ratioCleanDatUnnorm,cleanRelAbun.oneIter=relAbundanceUnnorm,
-              convergencePlot=convergencePlot,logConvergencePlot=logConvergencePlot,varPlot.input=plot5,varPlot.oneIter=plot4,varPlot.cleanRelAbun=plot1,MDSplot.input=MDS1.plot,MDSplot.oneIter=MDS2.plot,MDSplot.cleanRelAbun=MDS3.plot,iterations=iterations,converged=converged))
+              convergencePlots=convergencePlots,meanSDplots=meanSDplots.rec,MDSplots=MDSplots.rec,
+#              convergencePlot=convergencePlot,logConvergencePlot=logConvergencePlot,varPlot.input=plot5,varPlot.oneIter=plot4,varPlot.cleanRelAbun=plot1,MDSplot.input=MDS1.plot,MDSplot.oneIter=MDS2.plot,MDSplot.cleanRelAbun=MDS3.plot,
+              iterations=iterations,converged=converged))
 }
 
 } #close TAMPOR function
