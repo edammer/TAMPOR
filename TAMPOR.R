@@ -133,6 +133,7 @@ if (!any( batchwiseGIScandidateCounts == 0) & !any( batchwiseSampleCounts < mini
 ## Specify Normalization 'channels' as batch-specific indices, for mean or median initial denominator
    # *Now allows setting GISindices even if your GIS is on different channels in different batches, essentially if channel order is not the same in each batch.
    # This enables using TAMPOR for batched LFQ or LFQ of different cohorts.
+if ("GIS" %in% colnames(traits)) GISchannels<-unique(c(GISchannels,rownames(traits)[which(traits$GIS=="GIS")])) #fixes bug where GIS channels specified in traits$GIS not recognized after splitting channel names when batchPrefixInSampleNames = TRUE
 GISindices<-list()
 i.prev=0
 offset=0
@@ -467,10 +468,10 @@ cat(paste0("Writing PDF output to ",file1,"\n"))
 
 # Has variance been stabilized?
 force.inf2NA <- function(x) ifelse(is.finite(x), x, NA)
-plot1 <- vsn::meanSdPlot(force.inf2NA(log2(relAbundanceNorm2)),xlab="rank(mean):  log2(relAbundanceNorm2)")
+plot1 <- vsn::meanSdPlot(force.inf2NA(log2(as.matrix(relAbundanceNorm2))),xlab="rank(mean):  log2(relAbundanceNorm2)")
 #plot2 <- vsn::meanSdPlot(force.inf2NA(cleanDat),xlab="rank(mean):  Final TAMPOR log2(ratio)") # Ratio data has u-shape.
 #plot3 <- vsn::meanSdPlot(force.inf2NA(log2(relAbundanceUnnorm)),xlab="rank(mean):  log2(relabundanceUnnorm)") # Abundance. 
-plot4 <- vsn::meanSdPlot(force.inf2NA(log2(ratioCleanDatUnnorm*RW.relAbunFactors.HiMissRmvd)),xlab="rank(mean):  Naive log2(abundance/GIS *rel. Abun.)") # ratio converted to rel abun does not have u-shape.
+plot4 <- vsn::meanSdPlot(force.inf2NA(log2(as.matrix(ratioCleanDatUnnorm*RW.relAbunFactors.HiMissRmvd))),xlab="rank(mean):  Naive log2(abundance/GIS *rel. Abun.)") # ratio converted to rel abun does not have u-shape.
 plot5 <- vsn::meanSdPlot(force.inf2NA(log2(as.matrix(cleanDat.orig))),xlab="rank(mean): log2(orig. abun)") #RAW
 
 ymax=1.25*max(c(plot1$sd,plot4$sd,plot5$sd))  #(scale all the meanSD plots so they are comparable)
@@ -481,8 +482,8 @@ horizMin=min(c(plot1$sd,plot4$sd,plot5$sd))   #set to y=minimum of lowest-reachi
 
 # Compare same plots without GIS, if we did not remove GIS after TAMPOR.
 if(!length(which(traits$GIS=="GIS"))==nrow(traits) & !removeGISafter) {
-  plot1.noGIS <- vsn::meanSdPlot(log2(relAbundanceNorm2)[,-which(traits$GIS=="GIS")],xlab="rank(mean):  log2(relAbundanceNorm2)")
-  plot4.noGIS <- vsn::meanSdPlot(log2(ratioCleanDatUnnorm*RW.relAbunFactors.HiMissRmvd)[,-which(traits$GIS=="GIS")],xlab="rank(mean):  Naive log2(abundance/GIS *rel. Abun.)") # ratio converted to rel abun does not have u-shape.
+  plot1.noGIS <- vsn::meanSdPlot(log2(as.matrix(relAbundanceNorm2))[,-which(traits$GIS=="GIS")],xlab="rank(mean):  log2(relAbundanceNorm2)")
+  plot4.noGIS <- vsn::meanSdPlot(log2(as.matrix(ratioCleanDatUnnorm*RW.relAbunFactors.HiMissRmvd))[,-which(traits$GIS=="GIS")],xlab="rank(mean):  Naive log2(abundance/GIS *rel. Abun.)") # ratio converted to rel abun does not have u-shape.
   plot5.noGIS <- vsn::meanSdPlot(log2(as.matrix(cleanDat.orig))[,-which(traits$GIS=="GIS")],xlab="rank(mean): log2(orig. abun)") #RAW
 
   ymax.noGIS=1.25*max(c(plot1.noGIS$sd,plot4.noGIS$sd,plot5.noGIS$sd))
