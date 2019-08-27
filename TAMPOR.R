@@ -314,6 +314,7 @@ for (repeats in 1:iterations) {
   if(repeats==1) {
     ratioCleanDatUnnorm.iter1 <- 2^cleanDat.log2.ratioUnnorm
     relAbundanceUnnorm.iter1  <- as.matrix(RW.relAbunFactors.HiMissRmvd*ratioCleanDatUnnorm.iter1)
+    colnames(ratioCleanDatUnnorm.iter1)<-colnames(relAbundanceUnnorm.iter1)<- colnames(ratioCleanDatNorm)
   }
 
 
