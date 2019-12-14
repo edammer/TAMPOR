@@ -435,7 +435,7 @@ numericMeta<-traitsWithGIS<-traits
 #relAbundanceUnnorm<-readRDS(paste0(outputtabs,"relAbundanceUnnorm.naiveRelAbun.AfterRatioOverGIS_",iterations,"iter.RDS"))
 
   ## One can remove GIS here, depending on whether these are (not) biologically meaningful for comparisons downstream
-  if(removeGISafter) numericMeta <- traits <- traits[!traits$GIS == "GIS", ] #***
+  if (length(which(traits$GIS == "GIS"))>0) if(removeGISafter) numericMeta <- traits <- traits[-which(traits$GIS == "GIS"), ] #***
   cleanDat <- cleanDatNorm2[, match(rownames(traits), colnames(cleanDatNorm2))] #NOTE: overwrites cleanDat (intermediate structure during cleanup)
 
   ratioCleanDatUnnorm <- ratioCleanDatUnnorm[, match(rownames(traits), colnames(ratioCleanDatUnnorm))]
