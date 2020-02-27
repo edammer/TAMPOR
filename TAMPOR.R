@@ -388,7 +388,9 @@ converged=as.logical(abs(iterationTrackingDF[repeats,4])<0.00000001)
 if (iterations>1) {
   par(mfrow=c(1,2),oma=c(0,0,2,0))
   plot(iterationTrackingDF[2:nrow(iterationTrackingDF),1],abs(iterationTrackingDF[2:nrow(iterationTrackingDF),4]),xlab="Iteration",ylab="Frobenius Norm Diff from Previous", main="Linear Scale")
-  plot(iterationTrackingDF[2:nrow(iterationTrackingDF),1],log10(abs(iterationTrackingDF[2:nrow(iterationTrackingDF),4])),xlab="Iteration",ylab="log10(|Frobenius Norm Diff from Previous|)", main="Log10 Scale")
+  logAbsFrobenDiff<-log10(abs(iterationTrackingDF[2:nrow(iterationTrackingDF),4]))
+  logAbsFrobenDiff[logAbsFrobenDiff< -10] <- -10    #censor log10(0) and all norm differences of less than 1e-10 in next plot
+  plot(iterationTrackingDF[2:nrow(iterationTrackingDF),1],logAbsFrobenDiff,xlab="Iteration",ylab="log10(|Frobenius Norm Diff from Previous|)", main="Log10 Scale")
   mtext(paste0("Convergence Tracking, Iterations 2-",iterations),line=0.25,outer=TRUE,cex=1.5)
   convergencePlots<-recordPlot()
   PDFpage3=TRUE
