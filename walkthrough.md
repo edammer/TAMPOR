@@ -3,7 +3,7 @@
 ## 1. Sample Data for 3 Batches
 ####
 Consider 3 batches of protein measurements for 5 samples in each batch. Each batch also included pooled equal mixture (a "physical average," or GIS) of all 15 samples, as 2 technical replicates intrabatch.
-Therefore, there are a total of (5+2)+(5+2)+(5+2) = 21 samples including 6 GIS samples in 3 distinct batches were measured for proteomics in our example.
+Therefore, there are a total of (5+2)+(5+2)+(5+2) = 21 samples including 6 GIS samples in 3 distinct batches measured for proteomics in our example.
 
 We will consider the "complete" proteomic set as 10 protein isoform measurements for this example (instead of 100s to 1000s).
 ####
