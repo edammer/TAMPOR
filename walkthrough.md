@@ -143,7 +143,7 @@ rownames(dat.rowSweep.log2)<-rownames(dat.rowSweep)
 
 dat.colSweep = apply(dat.rowSweep.log2,2,function(x) { x -median(x) } )
 
-
+hist(dat.colSweep,breaks=20,xlab="log2(Abundance/Central Tendency)",main="")
 ```
 Following this sweep, the population of all log2(ratios) centers at 0 and is a Gaussian distribution:
 ![alt text](https://github.com/edammer/TAMPOR/blob/master/dat.colSweep-histo.jpg "Histogram of data after 1 round of two-way median polish of ratio")
