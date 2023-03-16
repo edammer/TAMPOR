@@ -6,6 +6,7 @@ For public use with citation of origin, and original author
 ####
 #### - Robustly removes batch artifacts and batchwise variance from abundance data.
 #### - Works well even if batch replicates for normalization have unusual variance compared to biological samples not used for normalization (e.g., due to differential peptide digestion, different tissue region, or different genetic background of control samples.)
+#### - See <A href="https://github.com/edammer/TAMPOR/blob/master/walkthrough.md">walkthrough using sample 3 batches x 10 protein data</a>, an example of TAMPOR use case 3.
 ####
 ## General Use Cases
 ####
