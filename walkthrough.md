@@ -29,7 +29,7 @@ Each of the non-GIS channels are a randomized sample of diagnosis Alzheimer's Di
 The equation for TAMPOR leveraging both GIS and non-GIS samples is defined
   for each row **i**, each sample **j**, and each batch **k**(1:n) over **n** batches as follows:
 ####
-![alt text](https://github.com/edammer/TAMPOR/blob/master/Equation2.JPG "MDS improvement of 50 batch TMT proteomics data")
+![alt text](https://github.com/edammer/TAMPOR/blob/master/Equation2.JPG "Hybrid TAMPOR, Equation 2 (Frontiers, 2023)")
 ####
 Before starting calculations, let's set up some convenient ways of indexing the above data in **dat**.
 ####
@@ -133,15 +133,22 @@ MAPT | 0.901447716 | 0.662374044 | 0.773415306 | 0.713908866 | 0.597235076 | 1.3
 HSP90B1 | 1.016694747 | 1.110736713 | 0.864267116 | 0.795588911 | 1.00860775 | 1.131138 | 0.983305253 | | 0.888304934 | 0.786089024 | 1.097936048 | 1.00860775 | 0.756497296 | 1.379914787 | 0.853071419 | | 0.999967409 | 0.896283311 | 1.098540318 | 0.892023987 | 1.00860775 | 1.270251894 | 1.022785212
 MT-CO2 |0.920674203 | 0.675072315 | 0.855874362 | 0.821820149 | 1.370883808 | 1.031310046 | 1.066574717 | | 0.909416208 | 0.712742694 | 1.288185011 | 0.844079253 | 0.855874362 | 1.689881386 | 1.090583792 | | 0.972424057 | 1.054075444 | 0.469169133 | 0.965630875 | 0.188450867 | 0.855874362 | 1.316145759
 
-And with a log2-transform of the ratio, the column sweep can be performed as a subtraction of each column's, sample's, median log2(ratio):
+## 3. Complete two-way polish with a column sweep.
+
+With a log2-transform of the ratio, the column sweep can be performed as a subtraction of each column's, sample's, median log2(ratio).
   
 ```
 dat.rowSweep.log2 <- apply(dat.rowSweep,2,function(x) log2(as.numeric(x)))
 rownames(dat.rowSweep.log2)<-rownames(dat.rowSweep)
 
 dat.colSweep = apply(dat.rowSweep.log2,2,function(x) { x -median(x) } )
-# This data centers around a log2(abundance/central tendency) value of 0 (ratios of 1).
-                                                    
+
+
+```
+Following this sweep, the population of all log2(ratios) centers at 0 and is a Gaussian distribution:
+![alt text](https://github.com/edammer/TAMPOR/blob/master/dat.colSweep-histo.jpg "Histogram of data after 1 round of two-way median polish of ratio")
+####
+```
 # Return data to the form of unlogged abundance, by taking the antilog (2^x), and multiplying by previous protein (row) medians.
 dat <- (2^dat.colSweep)*apply(dat,1,median)
 
