@@ -47,7 +47,7 @@ colIndices[["b2"]]<-c(8:14)
 colIndices[["b3"]]<-c(15:21)
 
 # Load the data, keep a backup (.original)
-dat.original<-read.csv(file="mode3_synaptosome_10proteins.csv",header=TRUE,row.names=1)
+dat <- dat.original <- read.csv(file="mode3_synaptosome_10proteins.csv",header=TRUE,row.names=1)
 ```
   
 The first term of the transformation divides the unlogged abundance value by the median intrabatch GIS abundance, which can be calculated over each row (i) for each batch (k) as:
