@@ -14,6 +14,8 @@ require(vsn, quietly=TRUE)
 require(limma, quietly=TRUE)
 
 
+if(Sys.getenv("RSTUDIO")=="1") cat("\nDetected TAMPOR run within RStudio.\nBe sure that your plots tab is actively displaying and covers at least 1/2 the width of your screen and 3/4 of its height\nto avoid plot capture failure and failure to retain TAMPOR output.\n")
+
 # Standardize "Batch" column in traits
 if ("batch" %in% colnames(traits) | "Batch" %in% colnames(traits) | "BATCH" %in% colnames(traits)) {
   if ("batch" %in% colnames(traits)) colnames(traits)[which(colnames(traits)=="batch")] <- "Batch"
@@ -508,19 +510,51 @@ meanSDplots.rec<-recordPlot()
 
 # Generate MDS plot pre/post normalization.
 cat("Generating MDS plots in PDF output...\n")
+
+MDSplotter.fallback<-function(data,colors,title) {
+	skip=FALSE
+	x <- as.matrix(data)
+	nsamples <- ncol(x)
+	if(nsamples < 3) {
+	  cat(paste0("x Only ",nsamples," columns of data: need at least 3. Skipping MDS plot.\n"))
+	  skip=TRUE
+	}
+	# Remove rows with missing or Inf values
+	bad <- rowSums(is.finite(x)) < nsamples
+	if(any(bad)) x <- x[!bad,,drop=FALSE]
+	nprobes <- nrow(x)
+	if(nsamples < 2) {
+	  cat("x Number of samples is less than number of dimensions (2). Skipping MDS plot.\n")
+	  skip=TRUE
+	}
+	#cat(paste0("nprobes: ",nprobes,"\nndim: ",ndim,"\n\n"))
+	if(nprobes < 2) {
+	  cat("x Number of rows of data with no missing values across all samples is less than 2. Skipping MDS plot.\n")
+	  skip=TRUE
+	}
+	if(!skip) { 
+	  limma::plotMDS(data,col=colors,main=title)
+	} else {
+	  frame()
+	  mtext(paste0(title,"\n\n\n\ninput not suitable for MDS\n\n-See console messages."), adj=0.5, line=-4, cex=0.85, font=2);
+	}
+}
+
+
 par(mfrow=c(2.3,3))
+
 # The starkest comparisons -- from original norm abundance (no ratio), to Naive abun/GIS (converted back to rel abundance), to polished output
-MDS1.plot <- limma::plotMDS(log2(cleanDat.orig),col=traits$BatchColor,main="ORIGINAL log2(abundance)")
-MDS2.plot <- limma::plotMDS(log2(ratioCleanDatUnnorm*RW.relAbunFactors.HiMissRmvd),col=traits$BatchColor,main="Naive log2(abundance/GIS *Rel Abun.)")
-MDS3.plot <- limma::plotMDS(log2(relAbundanceNorm2),col=traits$BatchColor,main=paste0("TAMPOR log2(abundance) [",iterations,"iterations]"))
+MDS1.plot <- MDSplotter.fallback(data=log2(cleanDat.orig),colors=traits$BatchColor,title="ORIGINAL log2(abundance)")
+MDS2.plot <- MDSplotter.fallback(data=log2(ratioCleanDatUnnorm*RW.relAbunFactors.HiMissRmvd),colors=traits$BatchColor,title="Naive log2(abundance/GIS *Rel Abun.)")
+MDS3.plot <- MDSplotter.fallback(data=log2(relAbundanceNorm2),colors=traits$BatchColor,title=paste0("TAMPOR log2(abundance) [",iterations,"iterations]"))
 
 # Print same plots without GIS, if we did not remove GIS after TAMPOR.
 if(!length(which(traits$GIS=="GIS"))==nrow(traits) & !removeGISafter) {
-  MDS1.noGIS.plot <- limma::plotMDS(log2(cleanDat.orig)[,-which(traits$GIS=="GIS")],col=traits$BatchColor[-which(traits$GIS=="GIS")],main="ORIGINAL log2(abundance)")
+  MDS1.noGIS.plot <- MDSplotter.fallback(data=log2(cleanDat.orig)[,-which(traits$GIS=="GIS")],colors=traits$BatchColor[-which(traits$GIS=="GIS")],title="ORIGINAL log2(abundance)")
   mtext("GIS Removed")
-  MDS2.noGIS.plot <- limma::plotMDS(log2(ratioCleanDatUnnorm*RW.relAbunFactors.HiMissRmvd)[,-which(traits$GIS=="GIS")],col=traits$BatchColor[-which(traits$GIS=="GIS")],main="Naive log2(abundance/GIS *Rel Abun.)")
+  MDS2.noGIS.plot <- MDSplotter.fallback(data=log2(ratioCleanDatUnnorm*RW.relAbunFactors.HiMissRmvd)[,-which(traits$GIS=="GIS")],colors=traits$BatchColor[-which(traits$GIS=="GIS")],title="Naive log2(abundance/GIS *Rel Abun.)")
   mtext("GIS Removed")
-  MDS3.noGIS.plot <- limma::plotMDS(log2(relAbundanceNorm2)[,-which(traits$GIS=="GIS")],col=traits$BatchColor[-which(traits$GIS=="GIS")],main=paste0("TAMPOR log2(abundance) [",iterations,"iterations]"))
+  MDS3.noGIS.plot <- MDSplotter.fallback(data=log2(relAbundanceNorm2)[,-which(traits$GIS=="GIS")],colors=traits$BatchColor[-which(traits$GIS=="GIS")],title=paste0("TAMPOR log2(abundance) [",iterations,"iterations]"))
   mtext("GIS Removed")
 }
 
