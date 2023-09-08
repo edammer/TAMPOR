@@ -14,7 +14,7 @@ require(vsn, quietly=TRUE)
 require(limma, quietly=TRUE)
 
 
-if(Sys.getenv("RSTUDIO")=="1") cat("\nDetected TAMPOR run within RStudio.\nBe sure that your plots tab is actively displaying and covers at least 1/2 the width of your screen and 3/4 of its height\nto avoid plot capture failure and failure to retain TAMPOR output.\n")
+if(Sys.getenv("RSTUDIO")=="1") cat("\nDetected TAMPOR run within RStudio.\nBe sure that the pane with your plots tab covers at least 1/2 the width of your screen and 3/4 of its height\nto avoid plot capture failure and failure to retain TAMPOR output.\n")
 
 # Standardize "Batch" column in traits
 if ("batch" %in% colnames(traits) | "Batch" %in% colnames(traits) | "BATCH" %in% colnames(traits)) {
@@ -562,13 +562,13 @@ MDSplots.rec<-recordPlot()
 
 
 #Output PDF with same pages, and convergencePlots on page 3
-pdf(file1, width = 12, height = 8)
+pdf(file1, width = 18, height = 12)
 
 #par(mfrow=c(2,3))
-meanSDplots.rec #page 1
+print(meanSDplots.rec) #page 1
 
 #par(mfrow=c(2.3,3))
-MDSplots.rec #page 2
+print(MDSplots.rec) #page 2
 
 # Page 3 (convergence tracking)
 if (PDFpage3) print(convergencePlots)
