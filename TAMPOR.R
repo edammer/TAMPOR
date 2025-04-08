@@ -1,4 +1,4 @@
-TAMPOR <- function (dat, traits, noGIS = FALSE, useAllNonGIS = FALSE, batchPrefixInSampleNames = FALSE, GISchannels = "GIS", iterations = 250,
+TAMPOR <- function (dat, traits, noGIS = FALSE, useAllNonGIS = FALSE, batchPrefixInSampleNames = FALSE, GISchannels = "GIS", iterations = 250, skipMDS = FALSE, sampleMedianRows = "ALL", fractionNAmax = 0.500,
     samplesToIgnore = FALSE, meanOrMedian = "median", removeGISafter = FALSE, minimumBatchSize = 5, parallelThreads=2, outputSuffix = "TAMPOR", path=getwd()) {
 
 cleanDat <- dat
@@ -140,12 +140,31 @@ GISindices<-list()
 i.prev=0
 offset=0
 iter=0
+unique_batches <- unique(sampleIndex$batch)
 for ( i in as.character(batchIndex) ) {
   GISindices[[i]]<-vector()
   iter=iter+1
-  for (denomChannel in GISchannels) {
-    GISindices[[i]] <- c(GISindices[[i]], which(sampleIndex$batch == unique(sampleIndex$batch)[iter] & (sampleIndex$channel == denomChannel | rownames(traits) == denomChannel | sampleIndex$channel == "GIS") ))
-  }
+#  for (denomChannel in GISchannels) {
+#    GISindices[[i]] <- c(GISindices[[i]], which(sampleIndex$batch == unique(sampleIndex$batch)[iter] & (sampleIndex$channel == denomChannel | rownames(traits) == denomChannel | sampleIndex$channel == "GIS") ))
+#  }
+# Above code can hang for large batched sets in the 10s of 1000s; Alternate:  #***
+  # Precompute unique batches and current batch
+  current_batch <- unique_batches[iter]
+  
+  # Precompute row indices for the current batch
+  batch_indices <- which(sampleIndex$batch == current_batch)
+  
+  # Precompute channel matches
+  channel_matches <- sort(unique( 
+                                  c( na.omit(match(GISchannels,sampleIndex$channel[batch_indices])),
+                                     na.omit(which(rownames(traits)[batch_indices] %in% GISchannels)),
+                                     na.omit(which(sampleIndex$channel[batch_indices] == "GIS"))
+                                   )
+                                )  )
+  
+  # Indices within context of full data set for this batch meeting criteria
+  GISindices[[i]] <- batch_indices[channel_matches]
+
   if (!i.prev==0) { offset=offset+length(which(sampleIndex$batch==i.prev)) }
   GISindices[[i]] <- unique(GISindices[[i]]) - offset
   i.prev=i
@@ -194,6 +213,21 @@ if (length(badValues)>0) {
   cat(paste0(length(badValues)," bad values (<=0) in matrix replaced with NA.\nFirst fixed rows (up to 100) with at least one bad value are listed here:\n"))
   if(!is.null(badRows)) head(badRows,100)
 }
+
+
+if(!sampleMedianRows[1]=='ALL') {
+  if(is.numeric(sampleMedianRows)) {
+    sampleMedianRows.idx=sampleMedianRows
+    if(min(sampleMedianRows.idx)<1) stop("\n ERROR: step 2 sampleMedianRows include a value of 0 or less. All values of sampleMedianRows vector must specify rows that exist in input abundance matrix.\n")
+    if(max(sampleMedianRows.idx)>nrow(cleanDat)) stop("\n ERROR: step 2 sampleMedianRows specify a value greater than then number of rows remaining. All values of sampleMedianRows vector must specify rows that exist in input abundance matrix.\n")
+  } else {
+    sampleMedianRows.idx=as.vector(na.omit(match(sampleMedianRows,rownames(cleanDat))))
+  }
+  sampleMedianRows.found<-rownames(cleanDat)[sampleMedianRows.idx]
+  
+  cat(paste0("\n sampleMedianRows requested: ",length(sampleMedianRows),"\n sampleMedianRows found: ",length(sampleMedianRows.found),"\n - These rows will be used for determining log2(ratio/central tendency) median in each sample for step 2 subtraction, sample-wise.\n\n"))
+}
+
 
 cleanDat.original <- cleanDat 
 
@@ -269,7 +303,7 @@ for (repeats in 1:iterations) {
 
   ## For cleanDat.log2.ratioUnnorm:
   ## Enforce <50% missingness (1 less than half of columns (or round down half if odd number of columns))
-  LThalfSamples <- length(colnames(cleanDat.log2.ratioUnnorm)) / 2
+  LThalfSamples <- length(colnames(cleanDat.log2.ratioUnnorm)) * fractionNAmax
   LThalfSamples <- LThalfSamples - if ((length(colnames(cleanDat.log2.ratioUnnorm)) %% 2) == 1) {
     0.5
   } else {
@@ -290,7 +324,7 @@ for (repeats in 1:iterations) {
 
   ## For cleanDatNormNoColScaling and companion relative abundance factors:
   ## Enforce <50% missingness (1 less than half of cleanDatNormNoColScaling columns (or round down half if odd number of columns))
-  LThalfSamples <- length(colnames(cleanDatNormNoColScaling)) / 2
+  LThalfSamples <- length(colnames(cleanDatNormNoColScaling)) * fractionNAmax
   LThalfSamples <- LThalfSamples - if ((length(colnames(cleanDatNormNoColScaling)) %% 2) == 1) {
     0.5
   } else {
@@ -333,12 +367,25 @@ for (repeats in 1:iterations) {
 #  cleanDatNorm <- scale(cleanDatNormNoColScaling, scale = FALSE)
 #  colMeans(cleanDatNorm, na.rm = TRUE)
 
-  ## alternative columnwise normalization operation using mean or median [equivalent to scale() function above, if colAvg=mean(x,na.rm=TRUE) ]
-  cleanDatNorm2 <- apply(cleanDatNormNoColScaling, 2, function(x) {
-    colAvg <- eval(parse(text = paste0(meanOrMedian, "(x,na.rm=TRUE)"))) ## MEAN/MEDIAN FUNCTION CHOICE***
-    outputCol <- x - colAvg # rep(colAvg,length(x));
-    outputCol
-  })
+  if(sampleMedianRows[1]=="ALL") {
+    ## alternative columnwise normalization operation using mean or median [equivalent to scale() function above, if colAvg=mean(x,na.rm=TRUE) ]
+    cleanDatNorm2 <- apply(cleanDatNormNoColScaling, 2, function(x) {
+      colAvg <- eval(parse(text = paste0(meanOrMedian, "(x,na.rm=TRUE)"))) ## MEAN/MEDIAN FUNCTION CHOICE***
+      outputCol <- x - colAvg # rep(colAvg,length(x));
+      outputCol
+    })
+  } else {
+    sampleMedianRows.idx=as.vector(na.omit(match(sampleMedianRows.found,rownames(cleanDatNormNoColScaling))))
+    if(!length(sampleMedianRows.idx)>5) stop("\n ERROR: step 2 requires at least 5 sampleMedianRows specified that survived removal due to 50%+ missingness rowwise. Specify different row (indices) for parameter sampleMedianRows, or leave as 'ALL'.\n\n")
+    cat(paste0(" sampleMedianRows: ",length(sampleMedianRows.idx),"/",length(sampleMedianRows)," (remaining/requested)  "))
+
+    ## alternative columnwise normalization operation using mean or median [equivalent to scale() function above, if colAvg=mean(x,na.rm=TRUE) ]
+    cleanDatNorm2 <- apply(cleanDatNormNoColScaling, 2, function(x) {
+      colAvg <- eval(parse(text = paste0(meanOrMedian, "(x[sampleMedianRows.idx],na.rm=TRUE)"))) ## MEAN/MEDIAN FUNCTION CHOICE***
+      outputCol <- x - colAvg # rep(colAvg,length(x));
+      outputCol
+    })
+  }
 
   ## show columnwise normalization/scaling methods are equivalent (with rounding to a few decimals, at least)
 #  colMeans(cleanDatNorm, na.rm = TRUE) == colMeans(cleanDatNorm2, na.rm = TRUE) # TRUE if meanOrMedian="mean"
@@ -361,18 +408,32 @@ for (repeats in 1:iterations) {
   removeColumnsCurrent=which(apply(DFforFrobCurrent, 2, function(x) sum(is.na(x))) == nrow(DFforFrobCurrent))
   removeColumnsPrev=which(apply(DFforFrobPrev, 2, function(x) sum(is.na(x))) == nrow(DFforFrobPrev))
 
-  if (length(removeColumnsCurrent)>0 ) {
-    frobeniusNormCurrent <- norm(na.omit(DFforFrobCurrent[,-removeColumnsCurrent]), type = "F")
-  } else {
-    frobeniusNormCurrent <- norm(matrix((na.omit(DFforFrobCurrent))), type = "F")
+  if(!all(rowSums(is.na(DFforFrobCurrent)) >=1)) {  # norm function will work if a row or more have no missing values.
+    if (length(removeColumnsCurrent)>0 ) {
+      frobeniusNormCurrent <- norm(na.omit(DFforFrobCurrent[,-removeColumnsCurrent]), type = "F")
+    } else {
+      frobeniusNormCurrent <- norm(matrix((na.omit(DFforFrobCurrent))), type = "F")
+    }
+    if (length(removeColumnsPrev)>0 ) {
+      frobeniusNormPrev <- norm(na.omit(DFforFrobPrev[,-removeColumnsPrev]), type = "F")
+    } else {
+      frobeniusNormPrev <- norm(na.omit(DFforFrobPrev), type = "F")
+    }
+  } else {  # Calculate a norm ignoring missing values without throwing out rows.
+    if (length(removeColumnsCurrent)>0 ) {
+      frobeniusNormCurrent <- altFrobenius_norm(DFforFrobCurrent[,-removeColumnsCurrent])
+    } else {
+      frobeniusNormCurrent <- altFrobenius_norm(matrix(DFforFrobCurrent))
+    }
+    if (length(removeColumnsPrev)>0 ) {
+      frobeniusNormPrev <- altFrobenius_norm(DFforFrobPrev[,-removeColumnsPrev])
+    } else {
+      frobeniusNormPrev <- altFrobenius_norm(DFforFrobPrev)
+    }
   }
-  if (length(removeColumnsPrev)>0 ) {
-    frobeniusNormPrev <- norm(na.omit(DFforFrobPrev[,-removeColumnsPrev]), type = "F")
-  } else {
-    frobeniusNormPrev <- norm(na.omit(DFforFrobPrev), type = "F")
-  }
+
   initialFrobeniusNorm <- if (repeats == 1) {
-    frobeniusNormCurrent
+      frobeniusNormCurrent
   } else {
     initialFrobeniusNorm
   }
@@ -380,7 +441,7 @@ for (repeats in 1:iterations) {
   timer <- difftime(Sys.time(), timer.start, units="secs")
   time.sec<-round(as.numeric(timer),2)
   cat(paste0("     ",time.sec," sec     iteration convergence tracking (Frobenius Norm Difference):  ", signif(iterationTrackingDF[repeats, 4], 3), "\n"))
-  if (abs(iterationTrackingDF[repeats,4])<0.00000001) { cat("...Reached convergence criterion (Frobenius Norm Difference)<1e-8!\n"); break; }
+  if (repeats>1 & abs(iterationTrackingDF[repeats,4])<0.00000001) { cat("...Reached convergence criterion (Frobenius Norm Difference)<1e-8!\n"); break; }
 } # closes "for (repeats in 1:iterations)"
 iterations.intended=iterations
 iterations=repeats
@@ -509,7 +570,11 @@ meanSDplots.rec<-recordPlot()
 
 
 # Generate MDS plot pre/post normalization.
-cat("Generating MDS plots in PDF output...\n")
+if(!skipMDS) {
+  cat("Generating MDS plots in PDF output...\n")
+} else {
+  cat("Skipping MDS plotting [skipMDS=TRUE]...\n")
+}
 
 MDSplotter.fallback<-function(data,colors,title) {
 	skip=FALSE
@@ -540,25 +605,27 @@ MDSplotter.fallback<-function(data,colors,title) {
 	}
 }
 
-
-par(mfrow=c(2.3,3))
-
-# The starkest comparisons -- from original norm abundance (no ratio), to Naive abun/GIS (converted back to rel abundance), to polished output
-MDS1.plot <- MDSplotter.fallback(data=log2(cleanDat.orig),colors=traits$BatchColor,title="ORIGINAL log2(abundance)")
-MDS2.plot <- MDSplotter.fallback(data=log2(ratioCleanDatUnnorm*RW.relAbunFactors.HiMissRmvd),colors=traits$BatchColor,title="Naive log2(abundance/GIS *Rel Abun.)")
-MDS3.plot <- MDSplotter.fallback(data=log2(relAbundanceNorm2),colors=traits$BatchColor,title=paste0("TAMPOR log2(abundance) [",iterations,"iterations]"))
-
-# Print same plots without GIS, if we did not remove GIS after TAMPOR.
-if(!length(which(traits$GIS=="GIS"))==nrow(traits) & !removeGISafter) {
-  MDS1.noGIS.plot <- MDSplotter.fallback(data=log2(cleanDat.orig)[,-which(traits$GIS=="GIS")],colors=traits$BatchColor[-which(traits$GIS=="GIS")],title="ORIGINAL log2(abundance)")
-  mtext("GIS Removed")
-  MDS2.noGIS.plot <- MDSplotter.fallback(data=log2(ratioCleanDatUnnorm*RW.relAbunFactors.HiMissRmvd)[,-which(traits$GIS=="GIS")],colors=traits$BatchColor[-which(traits$GIS=="GIS")],title="Naive log2(abundance/GIS *Rel Abun.)")
-  mtext("GIS Removed")
-  MDS3.noGIS.plot <- MDSplotter.fallback(data=log2(relAbundanceNorm2)[,-which(traits$GIS=="GIS")],colors=traits$BatchColor[-which(traits$GIS=="GIS")],title=paste0("TAMPOR log2(abundance) [",iterations,"iterations]"))
-  mtext("GIS Removed")
+if(!skipMDS) {
+  
+  par(mfrow=c(2.3,3))
+  
+  # The starkest comparisons -- from original norm abundance (no ratio), to Naive abun/GIS (converted back to rel abundance), to polished output
+  MDS1.plot <- MDSplotter.fallback(data=log2(cleanDat.orig),colors=traits$BatchColor,title="ORIGINAL log2(abundance)")
+  MDS2.plot <- MDSplotter.fallback(data=log2(ratioCleanDatUnnorm*RW.relAbunFactors.HiMissRmvd),colors=traits$BatchColor,title="Naive log2(abundance/GIS *Rel Abun.)")
+  MDS3.plot <- MDSplotter.fallback(data=log2(relAbundanceNorm2),colors=traits$BatchColor,title=paste0("TAMPOR log2(abundance) [",iterations,"iterations]"))
+  
+  # Print same plots without GIS, if we did not remove GIS after TAMPOR.
+  if(!length(which(traits$GIS=="GIS"))==nrow(traits) & !removeGISafter) {
+    MDS1.noGIS.plot <- MDSplotter.fallback(data=log2(cleanDat.orig)[,-which(traits$GIS=="GIS")],colors=traits$BatchColor[-which(traits$GIS=="GIS")],title="ORIGINAL log2(abundance)")
+    mtext("GIS Removed")
+    MDS2.noGIS.plot <- MDSplotter.fallback(data=log2(ratioCleanDatUnnorm*RW.relAbunFactors.HiMissRmvd)[,-which(traits$GIS=="GIS")],colors=traits$BatchColor[-which(traits$GIS=="GIS")],title="Naive log2(abundance/GIS *Rel Abun.)")
+    mtext("GIS Removed")
+    MDS3.noGIS.plot <- MDSplotter.fallback(data=log2(relAbundanceNorm2)[,-which(traits$GIS=="GIS")],colors=traits$BatchColor[-which(traits$GIS=="GIS")],title=paste0("TAMPOR log2(abundance) [",iterations,"iterations]"))
+    mtext("GIS Removed")
+  }
+  
+  MDSplots.rec<-recordPlot()
 }
-
-MDSplots.rec<-recordPlot()
 
 
 #Output PDF with same pages, and convergencePlots on page 3
@@ -568,7 +635,7 @@ pdf(file1, width = 18, height = 12)
 print(meanSDplots.rec) #page 1
 
 #par(mfrow=c(2.3,3))
-print(MDSplots.rec) #page 2
+if (!skipMDS) print(MDSplots.rec) #page 2
 
 # Page 3 (convergence tracking)
 if (PDFpage3) print(convergencePlots)
@@ -582,22 +649,36 @@ dev.off() #closes file1
 #mean-SD plots have improved mean and minimum SD, going from no norm, to naive ratio*rel abun, to TAMPOR rel abundance...
 
 if(!length(which(traits$GIS=="GIS"))==nrow(traits) & !removeGISafter) { #single return statement now ok if only outputting recorded PDF pages...
-  return(list(cleanDat=cleanDatNorm2,cleanRelAbun=relAbundanceNorm2,traits=traits,cleanDat.oneIter=ratioCleanDatUnnorm,cleanRelAbun.oneIter=relAbundanceUnnorm,
-              convergencePlots=convergencePlots,meanSDplots=meanSDplots.rec,MDSplots=MDSplots.rec,
-#              convergencePlot=convergencePlot,logConvergencePlot=logConvergencePlot,varPlot.input=plot5,varPlot.oneIter=plot4,varPlot.cleanRelAbun=plot1,MDSplot.input=MDS1.plot,MDSplot.oneIter=MDS2.plot,MDSplot.cleanRelAbun=MDS3.plot,
-#              varPlot.input.noGIS=plot5.noGIS,varPlot.oneIter.noGIS=plot4.noGIS,varPlot.cleanRelAbun.noGIS=plot1.noGIS,MDSplot.input.noGIS=MDS1.noGIS.plot,MDSplot.oneIter.noGIS=MDS2.noGIS.plot,MDSplot.cleanRelAbun.noGIS=MDS3.noGIS.plot,
-              iterations=iterations,converged=converged))
+  if(!skipMDS) {
+    return(list(cleanDat=cleanDatNorm2,cleanRelAbun=relAbundanceNorm2,traits=traits,cleanDat.oneIter=ratioCleanDatUnnorm,cleanRelAbun.oneIter=relAbundanceUnnorm,
+                convergencePlots=convergencePlots,meanSDplots=meanSDplots.rec,MDSplots=MDSplots.rec,
+  #              convergencePlot=convergencePlot,logConvergencePlot=logConvergencePlot,varPlot.input=plot5,varPlot.oneIter=plot4,varPlot.cleanRelAbun=plot1,MDSplot.input=MDS1.plot,MDSplot.oneIter=MDS2.plot,MDSplot.cleanRelAbun=MDS3.plot,
+  #              varPlot.input.noGIS=plot5.noGIS,varPlot.oneIter.noGIS=plot4.noGIS,varPlot.cleanRelAbun.noGIS=plot1.noGIS,MDSplot.input.noGIS=MDS1.noGIS.plot,MDSplot.oneIter.noGIS=MDS2.noGIS.plot,MDSplot.cleanRelAbun.noGIS=MDS3.noGIS.plot,
+                iterations=iterations,converged=converged))
+               } else {  # skipMDS=TRUE
+    return(list(cleanDat=cleanDatNorm2,cleanRelAbun=relAbundanceNorm2,traits=traits,cleanDat.oneIter=ratioCleanDatUnnorm,cleanRelAbun.oneIter=relAbundanceUnnorm,
+                convergencePlots=convergencePlots,meanSDplots=meanSDplots.rec, # MDSplots=MDSplots.rec,
+                iterations=iterations,converged=converged))
+               }
 } else {
-  return(list(cleanDat=cleanDatNorm2,cleanRelAbun=relAbundanceNorm2,traits=traits,cleanDat.oneIter=ratioCleanDatUnnorm,cleanRelAbun.oneIter=relAbundanceUnnorm,
-              convergencePlots=convergencePlots,meanSDplots=meanSDplots.rec,MDSplots=MDSplots.rec,
-#              convergencePlot=convergencePlot,logConvergencePlot=logConvergencePlot,varPlot.input=plot5,varPlot.oneIter=plot4,varPlot.cleanRelAbun=plot1,MDSplot.input=MDS1.plot,MDSplot.oneIter=MDS2.plot,MDSplot.cleanRelAbun=MDS3.plot,
-              iterations=iterations,converged=converged))
+  if(!skipMDS) {
+    return(list(cleanDat=cleanDatNorm2,cleanRelAbun=relAbundanceNorm2,traits=traits,cleanDat.oneIter=ratioCleanDatUnnorm,cleanRelAbun.oneIter=relAbundanceUnnorm,
+                convergencePlots=convergencePlots,meanSDplots=meanSDplots.rec,MDSplots=MDSplots.rec,
+  #              convergencePlot=convergencePlot,logConvergencePlot=logConvergencePlot,varPlot.input=plot5,varPlot.oneIter=plot4,varPlot.cleanRelAbun=plot1,MDSplot.input=MDS1.plot,MDSplot.oneIter=MDS2.plot,MDSplot.cleanRelAbun=MDS3.plot,
+                iterations=iterations,converged=converged))
+               } else {  # skipMDS=TRUE
+    return(list(cleanDat=cleanDatNorm2,cleanRelAbun=relAbundanceNorm2,traits=traits,cleanDat.oneIter=ratioCleanDatUnnorm,cleanRelAbun.oneIter=relAbundanceUnnorm,
+                convergencePlots=convergencePlots,meanSDplots=meanSDplots.rec, # MDSplots=MDSplots.rec,
+                iterations=iterations,converged=converged))
+               }
 }
 
 } #close TAMPOR function
 
 
-
+altFrobenius_norm <- function(mat) {
+  sqrt(sum(mat^2, na.rm = TRUE))
+}
 
 
 
