@@ -98,7 +98,7 @@ path=getwd()       # Defaults to working directory path. This folder will contai
 skipMDS=FALSE      # You now have the option to skip the generation of MDS plots by setting skipMDS = TRUE.
                    # This is useful when you need faster output for 1000s of samples, or when transposed TAMPOR has more columns than rows, which would cause MDS plotting to fail and abort output.
 
-sampleMedianRows="ALL" # Instead of always using all rows to calculate sample-level medians (for the row‐normalization step), you can now restrict the calculation to a specified subset of rows.
+sampleMedianRows="ALL" # Instead of always using all rows to calculate sample-level medians (for the column‐normalization step), you can now restrict the calculation to a specified subset of rows within each column.
                        # Pass either a numeric index vector or row names; if set to "ALL", the function behaves as before.
                        # A check is done so that at least five of the specified rows survive missingness filtering before proceeding.
 
