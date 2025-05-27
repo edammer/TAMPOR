@@ -165,7 +165,7 @@ for ( i in as.character(batchIndex) ) {
   # Indices within context of full data set for this batch meeting criteria
   GISindices[[i]] <- batch_indices[channel_matches]
 
-  if (!i.prev==0) { offset=offset+length(which(sampleIndex$batch==i.prev)) }
+  if (!iter==1) { offset=offset+length(which(sampleIndex$batch==i.prev)) }
   GISindices[[i]] <- unique(GISindices[[i]]) - offset
   i.prev=i
 }
